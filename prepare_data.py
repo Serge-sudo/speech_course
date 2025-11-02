@@ -90,7 +90,18 @@ def extract_audio_files():
             print(f"Распаковка {archive_path}...")
             try:
                 with tarfile.open(archive_path, 'r:gz') as tar:
-                    tar.extractall(path=base_path)
+                    # Безопасная распаковка: проверяем пути файлов
+                    members = tar.getmembers()
+                    safe_members = []
+                    for member in members:
+                        # Проверка на directory traversal
+                        member_path = Path(member.name)
+                        if member_path.is_absolute() or '..' in member_path.parts:
+                            print(f"Пропуск небезопасного пути: {member.name}")
+                            continue
+                        safe_members.append(member)
+                    
+                    tar.extractall(path=base_path, members=safe_members)
                 print(f"✓ {split} распакован")
             except Exception as e:
                 print(f"✗ Ошибка при распаковке {split}: {e}")

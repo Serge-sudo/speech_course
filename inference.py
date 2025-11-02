@@ -2,7 +2,6 @@
 Скрипт для запуска инференса модели GigaAM на датасете FLEURS.
 """
 
-import gigaam
 from prepare_data import load_fleurs_data, normalize_text
 from tqdm import tqdm
 import pandas as pd
@@ -81,11 +80,16 @@ def main():
     if args.output is None:
         args.output = f'{args.split}_predictions.csv'
     
-    # Загрузка модели
+    # Загрузка модели с обработкой ошибок
     print(f"Загрузка модели GigaAM ({args.model})...")
     try:
+        import gigaam
         model = gigaam.load_model(args.model)
         print("✓ Модель загружена успешно!")
+    except ImportError:
+        print("✗ Ошибка: модуль gigaam не установлен")
+        print("Установите GigaAM: cd GigaAM && pip install -e . && cd ..")
+        return
     except Exception as e:
         print(f"✗ Ошибка при загрузке модели: {e}")
         return
