@@ -5,3 +5,8 @@ outputs
 .DS_Store
 submit.csv
 .ipynb_checkpoints
+checkpoints
+logs
+*.ckpt
+*.pt
+*.pth

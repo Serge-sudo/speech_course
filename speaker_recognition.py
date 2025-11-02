@@ -5,6 +5,7 @@ import torch
 import torchaudio
 from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
+import math
 
 
 class SpeakerDataset(torch.utils.data.Dataset):
@@ -105,7 +106,18 @@ class AngularMarginSoftmax(torch.nn.Module):
         self, embedding_dim: int, num_classes: int, margin: float, scale: float
     ):
         super().__init__()
-        raise NotImplementedError
+        self.embedding_dim = embedding_dim
+        self.num_classes = num_classes
+        self.margin = margin
+        self.scale = scale
+
+        self.weight = torch.nn.Parameter(
+            torch.FloatTensor(num_classes, embedding_dim)
+        )
+        torch.nn.init.xavier_uniform_(self.weight)
+
+        self.register_buffer('cos_margin', torch.tensor(math.cos(margin)))
+        self.register_buffer('sin_margin', torch.tensor(math.sin(margin)))
 
     def forward(self, embeddings: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         """
@@ -113,14 +125,41 @@ class AngularMarginSoftmax(torch.nn.Module):
         labels: B
         return: scalar tensor
         """
-        raise NotImplementedError
+
+        embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+        weight = torch.nn.functional.normalize(self.weight, p=2, dim=1)
+
+        cosine = torch.nn.functional.linear(embeddings, weight)
+
+        target_cosine = cosine[torch.arange(len(labels)), labels]
+
+        sine = torch.sqrt(torch.clamp(1.0 - target_cosine * target_cosine, min=1e-8))
+
+        target_cosine_margin = target_cosine * self.cos_margin - sine * self.sin_margin
+
+        one_hot = torch.zeros_like(cosine)
+        one_hot.scatter_(1, labels.view(-1, 1), 1.0)
+
+        output = (one_hot * target_cosine_margin.view(-1, 1)) + ((1.0 - one_hot) * cosine)
+
+        output = output * self.scale
+
+        loss = torch.nn.functional.cross_entropy(output, labels)
+
+        return loss
 
     def predict(self, embeddings: torch.Tensor) -> torch.Tensor:
         """
         embeddings: B x D
         return: B
         """
-        raise NotImplementedError
+
+        embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+        weight = torch.nn.functional.normalize(self.weight, p=2, dim=1)
+
+        cosine = torch.nn.functional.linear(embeddings, weight)
+
+        return torch.argmax(cosine, dim=1)
 
 
 class SpecScaler(torch.nn.Module):
@@ -215,9 +254,62 @@ class ModuleParams:
 
 
 def evaluate(
-    model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, device: str
+    model: torch.nn.Module,
+    dataloader: torch.utils.data.DataLoader,
+    device: str,
+    num_thresholds: int = 1000
 ) -> float:
-    raise NotImplementedError
+
+    model.eval()
+
+    embeddings_list = []
+    labels_list = []
+
+    with torch.no_grad():
+        for batch in dataloader:
+            _, wavs, labels = batch
+            emb, _ = model.forward(wavs.to(device))
+
+            emb = torch.nn.functional.normalize(emb, p=2, dim=1)
+
+            embeddings_list.append(emb.cpu())
+            labels_list.append(labels.cpu())
+
+    embeddings = torch.cat(embeddings_list, dim=0)
+    labels = torch.cat(labels_list, dim=0)
+
+    similarity_matrix = torch.mm(embeddings, embeddings.t())
+
+    labels_matrix = labels.unsqueeze(1) == labels.unsqueeze(0)
+
+    triu_indices = torch.triu_indices(len(labels), len(labels), offset=1)
+
+    scores = similarity_matrix[triu_indices[0], triu_indices[1]]
+    genuine_mask = labels_matrix[triu_indices[0], triu_indices[1]]
+
+    genuine_scores = scores[genuine_mask]
+    impostor_scores = scores[~genuine_mask]
+
+    if len(genuine_scores) == 0 or len(impostor_scores) == 0:
+        return 100.0
+
+    thresholds = torch.linspace(scores.min().item(), scores.max().item(), num_thresholds)
+
+    impostor_above_threshold = impostor_scores.unsqueeze(1) >= thresholds.unsqueeze(0)
+    genuine_below_threshold = genuine_scores.unsqueeze(1) < thresholds.unsqueeze(0)
+
+    far = impostor_above_threshold.float().mean(dim=0)
+    frr = genuine_below_threshold.float().mean(dim=0)
+
+    abs_diff = torch.abs(far - frr)
+    min_index = torch.argmin(abs_diff)
+
+    eer = (far[min_index] + frr[min_index]) / 2.0
+
+    model.train()
+
+    return eer.item() * 100
+
 
 
 def main(conf: ModuleParams) -> None:
@@ -254,6 +346,7 @@ def main(conf: ModuleParams) -> None:
 
     if conf.loss_function == "cross_entropy":
         criterion = torch.nn.CrossEntropyLoss()
+        optim = torch.optim.Adam(params=model.parameters(), lr=conf.learning_rate)
     elif conf.loss_function == "angular_margin":
         criterion = AngularMarginSoftmax(
             embedding_dim=model_params.emb_size,
@@ -261,10 +354,11 @@ def main(conf: ModuleParams) -> None:
             margin=conf.angular_margin,
             scale=conf.angular_scale,
         ).to(conf.device)
+
+        params = list(model.parameters()) + list(criterion.parameters())
+        optim = torch.optim.Adam(params=params, lr=conf.learning_rate)
     else:
         raise ValueError(f"Invalid loss function: {conf.loss_function}")
-
-    optim = torch.optim.Adam(params=model.parameters(), lr=conf.learning_rate)
 
     pbar = tqdm(range(conf.n_epochs), position=0, leave=True)
 
@@ -278,16 +372,19 @@ def main(conf: ModuleParams) -> None:
         for batch in train_dataloader:
             _, wavs, labels = batch
 
-            _, scores = model.forward(wavs.to(conf.device))
+            emb, scores = model.forward(wavs.to(conf.device))
 
             optim.zero_grad()
 
-            loss = criterion(scores, labels.to(conf.device))
+            if conf.loss_function == "angular_margin":
+                loss = criterion(emb, labels.to(conf.device))
+                predictions = criterion.predict(emb)
+            else:
+                loss = criterion(scores, labels.to(conf.device))
+                predictions = torch.argmax(scores, dim=1)
 
             loss.backward()
             optim.step()
-
-            predictions = torch.argmax(scores, dim=1)
 
             correct = (predictions == labels.to(conf.device)).sum().item()
             epoch_correct += correct
@@ -346,12 +443,12 @@ if __name__ == "__main__":
     params = ModuleParams(
         dataset_dir=Path("./data/train"),
         use_cache=False,
-        checkpoints_dir=Path("./checkpoints"),
+        checkpoints_dir=Path("./data/checkpoints"),
         model_params=ModelParams(),
         device="cpu",
         num_workers=1,
         n_epochs=20,
-        log_dir=Path("./logs/cross_entropy_hw_test"),
+        log_dir=Path("./data/logs/cross_entropy_hw_test"),
         loss_function="cross_entropy",
         validation_dir=Path("./data/dev"),
         validation_frequency=1,
