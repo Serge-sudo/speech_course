@@ -57,6 +57,10 @@ def normalize_text(text):
     Returns:
         нормализованный текст
     """
+    # Проверка входных данных
+    if not isinstance(text, str):
+        return ""
+    
     # Приведение к нижнему регистру
     text = text.lower()
     
