@@ -14,43 +14,61 @@ def run_inference(model, data_df, output_file='predictions.csv'):
     
     Args:
         model: модель GigaAM
-        data_df: DataFrame с данными
+        data_df: DataFrame с данными (содержит audio_array)
         output_file: путь для сохранения результатов
     
     Returns:
         predictions: список предсказаний
         references: список эталонных транскрипций
     """
+    import numpy as np
+    import tempfile
+    import soundfile as sf
+    import os
+    
     predictions = []
     references = []
-    audio_paths = []
+    audio_ids = []
     
     print(f"Запуск инференса на {len(data_df)} образцах...")
     
     for idx, row in tqdm(data_df.iterrows(), total=len(data_df), desc="Running inference"):
-        audio_path = row['audio_path']
+        audio_array = row['audio_array']
+        sampling_rate = row['sampling_rate']
+        audio_id = row.get('id', idx)
         reference_text = normalize_text(row['raw_text'])
         
         try:
+            # Создаем временный wav файл из массива
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+                sf.write(tmp_path, audio_array, sampling_rate)
+            
             # Транскрибация аудио
-            prediction = model.transcribe(audio_path)
+            prediction = model.transcribe(tmp_path)
+            
+            # Удаляем временный файл
+            os.unlink(tmp_path)
             
             # Нормализация предсказания
             prediction = normalize_text(prediction)
             
             predictions.append(prediction)
             references.append(reference_text)
-            audio_paths.append(audio_path)
+            audio_ids.append(audio_id)
             
         except Exception as e:
-            print(f"\nОшибка при обработке {audio_path}: {e}")
+            print(f"\nОшибка при обработке образца {audio_id}: {e}")
             predictions.append("")
             references.append(reference_text)
-            audio_paths.append(audio_path)
+            audio_ids.append(audio_id)
+            # Очистка временного файла в случае ошибки
+            if 'tmp_path' in locals() and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
     
     # Сохранение результатов
     results_df = pd.DataFrame({
-        'audio_path': audio_paths,
+        'audio_id': audio_ids,
         'reference': references,
         'prediction': predictions
     })

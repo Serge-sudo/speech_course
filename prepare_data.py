@@ -2,44 +2,57 @@
 Скрипт для подготовки данных FLEURS для обучения и оценки.
 """
 
-import os
 import pandas as pd
-import torch
-from pathlib import Path
 import re
+import tempfile
+import soundfile as sf
 
 
 def load_fleurs_data(split='train'):
     """
-    Загружает данные FLEURS для указанного split (train/dev/test)
+    Загружает данные FLEURS для указанного split (train/validation/test)
+    используя библиотеку datasets от HuggingFace
     
     Args:
         split: один из ['train', 'dev', 'test']
+               'dev' автоматически преобразуется в 'validation'
     
     Returns:
         DataFrame с данными
     """
-    base_path = Path('fleurs/data/ru_ru')
-    tsv_file = base_path / f'{split}.tsv'
-    audio_dir = base_path / 'audio' / split
+    try:
+        from datasets import load_dataset
+    except ImportError:
+        print("Ошибка: библиотека datasets не установлена")
+        print("Установите её: pip install datasets")
+        return pd.DataFrame()
     
-    # Чтение TSV файла
-    data = pd.read_csv(tsv_file, sep='\t', header=None, 
-                       names=['id', 'filename', 'raw_text', 'normalized_text', 
-                              'phonemes', 'num_samples', 'gender'])
+    # Преобразуем 'dev' в 'validation' для совместимости с datasets
+    dataset_split = 'validation' if split == 'dev' else split
     
-    # Добавление полных путей к аудио файлам
-    data['audio_path'] = data['filename'].apply(lambda x: str(audio_dir / x))
+    print(f"Загрузка FLEURS (ru_ru, {dataset_split}) из HuggingFace...")
     
-    # Проверка существования файлов
-    data['exists'] = data['audio_path'].apply(os.path.exists)
-    missing = (~data['exists']).sum()
+    try:
+        dataset = load_dataset("google/fleurs", "ru_ru", split=dataset_split)
+    except Exception as e:
+        print(f"Ошибка при загрузке датасета: {e}")
+        return pd.DataFrame()
     
-    if missing > 0:
-        print(f"Предупреждение: {missing} аудио файлов не найдено в {split}")
-        print(f"Убедитесь, что архивы распакованы в директории {audio_dir}")
+    # Преобразование в DataFrame
+    data_list = []
+    for idx, item in enumerate(dataset):
+        data_list.append({
+            'id': item['id'],
+            'audio_array': item['audio']['array'],
+            'sampling_rate': item['audio']['sampling_rate'],
+            'raw_text': item['raw_transcription'],
+            'transcription': item['transcription'],
+            'num_samples': item['num_samples'],
+            'gender': item['gender']
+        })
     
-    data = data[data['exists']]
+    data = pd.DataFrame(data_list)
+    print(f"✓ Загружено {len(data)} образцов")
     
     return data
 
@@ -74,50 +87,11 @@ def normalize_text(text):
     return text
 
 
-def extract_audio_files():
-    """
-    Распаковывает аудио файлы из архивов
-    """
-    import tarfile
-    
-    base_path = Path('fleurs/data/ru_ru/audio')
-    
-    for split in ['train', 'dev', 'test']:
-        archive_path = base_path / f'{split}.tar.gz'
-        extract_path = base_path / split
-        
-        if not extract_path.exists():
-            print(f"Распаковка {archive_path}...")
-            try:
-                with tarfile.open(archive_path, 'r:gz') as tar:
-                    # Безопасная распаковка: проверяем пути файлов
-                    members = tar.getmembers()
-                    safe_members = []
-                    for member in members:
-                        # Проверка на directory traversal
-                        member_path = Path(member.name)
-                        if member_path.is_absolute() or '..' in member_path.parts:
-                            print(f"Пропуск небезопасного пути: {member.name}")
-                            continue
-                        safe_members.append(member)
-                    
-                    tar.extractall(path=base_path, members=safe_members)
-                print(f"✓ {split} распакован")
-            except Exception as e:
-                print(f"✗ Ошибка при распаковке {split}: {e}")
-        else:
-            print(f"✓ {split} уже распакован")
-
-
 # Пример использования
 if __name__ == "__main__":
     print("Проверка и подготовка данных FLEURS...")
     print("=" * 60)
     
-    # Распаковка архивов если необходимо
-    extract_audio_files()
-    
-    print("\n" + "=" * 60)
     print("Загрузка данных...")
     
     # Загрузка данных
@@ -132,12 +106,13 @@ if __name__ == "__main__":
     print(f"Total: {len(train_data) + len(dev_data) + len(test_data)}")
     
     # Пример нормализации
-    print("\n" + "=" * 60)
-    print("Пример нормализации текста:")
-    sample_text = train_data.iloc[0]['raw_text']
-    normalized = normalize_text(sample_text)
-    print(f"\nОригинал: {sample_text}")
-    print(f"Нормализованный: {normalized}")
+    if len(train_data) > 0:
+        print("\n" + "=" * 60)
+        print("Пример нормализации текста:")
+        sample_text = train_data.iloc[0]['raw_text']
+        normalized = normalize_text(sample_text)
+        print(f"\nОригинал: {sample_text}")
+        print(f"Нормализованный: {normalized}")
     
     print("\n" + "=" * 60)
     print("Подготовка данных завершена!")
