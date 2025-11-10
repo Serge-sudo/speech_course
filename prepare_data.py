@@ -22,6 +22,7 @@ def load_fleurs_data(split='train'):
     """
     try:
         from datasets import load_dataset
+        import os
     except ImportError:
         print("Ошибка: библиотека datasets не установлена")
         print("Установите её: pip install datasets")
@@ -33,9 +34,36 @@ def load_fleurs_data(split='train'):
     print(f"Загрузка FLEURS (ru_ru, {dataset_split}) из HuggingFace...")
     
     try:
+        # Временно переименовываем fleurs.py чтобы избежать конфликта с dataset scripts
+        fleurs_script = 'fleurs/fleurs.py'
+        fleurs_backup = 'fleurs/fleurs.py.bak'
+        
+        renamed = False
+        if os.path.exists(fleurs_script):
+            try:
+                os.rename(fleurs_script, fleurs_backup)
+                renamed = True
+            except:
+                pass
+        
+        # Загружаем датасет из HuggingFace Hub
         dataset = load_dataset("google/fleurs", "ru_ru", split=dataset_split)
+        
+        # Восстанавливаем файл если переименовали
+        if renamed and os.path.exists(fleurs_backup):
+            try:
+                os.rename(fleurs_backup, fleurs_script)
+            except:
+                pass
+                
     except Exception as e:
         print(f"Ошибка при загрузке датасета: {e}")
+        # Восстанавливаем файл в случае ошибки
+        if renamed and os.path.exists(fleurs_backup):
+            try:
+                os.rename(fleurs_backup, fleurs_script)
+            except:
+                pass
         return pd.DataFrame()
     
     # Преобразование в DataFrame
