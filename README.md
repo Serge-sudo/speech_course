@@ -20,3 +20,17 @@ python train_angular_margin.py
 ```bash
 tensorboard --logdir=./logs
 ```
+
+ОТЧЕТ
+
+1. Достигнут результат 
+    train top1 accuracy > 0.99 [папка train_tensorboard]
+    dev EER < 4.5% [файл visualize.ipynb]
+2. Графики обучения в папке train_tensorboard
+3. Файл visualize.ipynb заполнен
+4. Параметры обучения находится в train_angular_margin.py
+5. Код находится в файле speaker_recognition.py
+
+По результатам работы используя angular margin на данных получилось получить ERR **4.4**.
+
+
