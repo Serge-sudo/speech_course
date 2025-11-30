@@ -1,20 +1,11 @@
-# speech_course
+### Audio-Conditioned LLM
 
-MIPT, autumn 2025
+#### Домашняя работа
+В качестве домашней работы предлагается выполнить задания из ноутбука [audiollm-seminar.ipynb](audiollm-seminar.ipynb), где вам предстоит:
+* **2 балла**: Реализовать пайплайн создания AudioQA-данных, используя ASR-датасет
+* **4 балла**: Дописать отсутствующий код в архитектуре AudioLLM-модели и в датасете, после этого запустить обучение на маленьком сэмпле данных и убедиться, что происходит переобучение.
+* **4 балла**: Написать функцию генерации и провалидировать предобученную AudioLLM-модель, архитектура которой совпадает с той, что вы реализуете в пункте ранее.
 
-| # | Date | Description | Materials |
-|---------|------|-------------|---------|
-| 1 | 10.09 | Introduction. Speech Processing Tasks | [slides](https://docs.google.com/presentation/d/17eHV-M9BJwHrLgCtMiyBgA5Vm96jaDDs62RC2s3GD-M), [recording](https://youtu.be/BB445XwXwEU) |
-| 2 | 17.09 | Digital Signal Processing, RIR, AEC | [slides](https://docs.google.com/presentation/d/1Jl4uBhqN4GKE79r52xRNMPzElIQmVI7ckgeH2hy3sKo), [recording](https://youtu.be/TaMwhFnQe-c), [seminar](https://colab.research.google.com/github/georgygospodinov/speech_course/blob/main/week02/dsp_basics.ipynb) |
-| 3 | 24.09 | STFT, Keyword Spotting | [slides](https://docs.google.com/presentation/d/1f53twYUY__edWL3Ny48mO4ef5YCqdVSF8VkTGvsQKzg), [recording](https://youtu.be/zaoVdVQVxfg), [seminar](./week03/), **[HW](./week03/kws/)** |
-| 4 | 01.10 | Speech Recognition: CTC, Beam Search, Rescoring | [slides](https://docs.google.com/presentation/d/1RDpUIu2EaheE_MmKNUb8m65FocFiFhSjgTa_EfxREHE), [recording](https://youtu.be/2shAMBK4ASY) |
-| 5 | 08.10 | Speech Recognition: Encoder-Decoder, Streaming, RNN-T, Decoder-only | [slides](https://docs.google.com/presentation/d/1ZAepHIe7ME8Vh9PKcVt8-0XLsezjOre-0_rJdPChZa0), [recording](https://youtu.be/_ouCYN4y4fk), [seminar](https://colab.research.google.com/drive/1t0R7uAttkXFytv4CkFHMfaja7SHY9GNy?usp=sharing#scrollTo=WJFBF2caa_PB), **[HW](./week05/README.md)** |
-| 6 | 15.10 | Self-Supervised Learning: wav2vec2.0, HuBERT, BEST-RQ, GigaAM | [slides](https://docs.google.com/presentation/d/16CyQ7_qoN_vYhDPoO8lbkNZsMf-zaCIjJP3EvXqdois), [recording](https://youtu.be/_MFJ-EAuSZI) |
-| 7 | 22.10 | Speech Recognition: Semi-Supervised Learning, Data | [slides](https://docs.google.com/presentation/d/1uRfIOfiwu4XKUnIEhdYhbYTlqKVm6jj1WZHlQctMfEw/edit?slide=id.g38631e327a6_1_0), [recording](https://youtu.be/p54HHhDSmm8), [seminar](https://colab.research.google.com/github/georgygospodinov/speech_course/blob/main/week07/seminar.ipynb) |
-| 8 | 29.10 | Speaker Recognition | [slides](https://docs.google.com/presentation/d/1NM7VWeVGk_25aCQ2XGKQHag8HpBNVTPD7BNFo0OsfM4), [recording](https://youtu.be/WsspMkXG6Ys), [seminar](./week08/visualize.ipynb), **[HW](./week08/README.md)** |
-| 10 | 12.11 | Audio-Conditioned LLMs | [slides](https://docs.google.com/presentation/d/1kTkS9tHV6RUWlqP7LMmfRVZfn0-cfGcF-yy5iG0eJnw/), [recording](https://www.youtube.com/watch?v=VNg9bmF9bK0&t=11s), [seminar](./week10/audiollm-seminar.ipynb), **[HW](./week10/audiollm-hw.ipynb)** |
-
-
-## Previous versions
-* [2024](https://github.com/georgygospodinov/speech_course/tree/2024)
-* [2023](https://github.com/georgygospodinov/speech_course/tree/2023)
+#### Семинар
+Чтобы было интереснее и понятнее выполнять домашнее задание, может быть полезно посмотреть и разобрать заполненный семинарский ноутбук, в котором разбирается использвание open-source модели UltraVox.
+Семинар можно найти [audiollm-seminar.ipynb](audiollm-seminar.ipynb).
