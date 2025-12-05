@@ -1,20 +1,15 @@
-# speech_course
+### Inference of Speech-Language Model
 
-MIPT, autumn 2025
+**Дата выдачи: 05.11.25**
+**Дедлайн сдачи: до 21.12.25 включительно**
 
-| # | Date | Description | Materials |
-|---------|------|-------------|---------|
-| 1 | 10.09 | Introduction. Speech Processing Tasks | [slides](https://docs.google.com/presentation/d/17eHV-M9BJwHrLgCtMiyBgA5Vm96jaDDs62RC2s3GD-M), [recording](https://youtu.be/BB445XwXwEU) |
-| 2 | 17.09 | Digital Signal Processing, RIR, AEC | [slides](https://docs.google.com/presentation/d/1Jl4uBhqN4GKE79r52xRNMPzElIQmVI7ckgeH2hy3sKo), [recording](https://youtu.be/TaMwhFnQe-c), [seminar](https://colab.research.google.com/github/georgygospodinov/speech_course/blob/main/week02/dsp_basics.ipynb) |
-| 3 | 24.09 | STFT, Keyword Spotting | [slides](https://docs.google.com/presentation/d/1f53twYUY__edWL3Ny48mO4ef5YCqdVSF8VkTGvsQKzg), [recording](https://youtu.be/zaoVdVQVxfg), [seminar](./week03/), **[HW](./week03/kws/)** |
-| 4 | 01.10 | Speech Recognition: CTC, Beam Search, Rescoring | [slides](https://docs.google.com/presentation/d/1RDpUIu2EaheE_MmKNUb8m65FocFiFhSjgTa_EfxREHE), [recording](https://youtu.be/2shAMBK4ASY) |
-| 5 | 08.10 | Speech Recognition: Encoder-Decoder, Streaming, RNN-T, Decoder-only | [slides](https://docs.google.com/presentation/d/1ZAepHIe7ME8Vh9PKcVt8-0XLsezjOre-0_rJdPChZa0), [recording](https://youtu.be/_ouCYN4y4fk), [seminar](https://colab.research.google.com/drive/1t0R7uAttkXFytv4CkFHMfaja7SHY9GNy?usp=sharing#scrollTo=WJFBF2caa_PB), **[HW](./week05/README.md)** |
-| 6 | 15.10 | Self-Supervised Learning: wav2vec2.0, HuBERT, BEST-RQ, GigaAM | [slides](https://docs.google.com/presentation/d/16CyQ7_qoN_vYhDPoO8lbkNZsMf-zaCIjJP3EvXqdois), [recording](https://youtu.be/_MFJ-EAuSZI) |
-| 7 | 22.10 | Speech Recognition: Semi-Supervised Learning, Data | [slides](https://docs.google.com/presentation/d/1uRfIOfiwu4XKUnIEhdYhbYTlqKVm6jj1WZHlQctMfEw/edit?slide=id.g38631e327a6_1_0), [recording](https://youtu.be/p54HHhDSmm8), [seminar](https://colab.research.google.com/github/georgygospodinov/speech_course/blob/main/week07/seminar.ipynb) |
-| 8 | 29.10 | Speaker Recognition | [slides](https://docs.google.com/presentation/d/1NM7VWeVGk_25aCQ2XGKQHag8HpBNVTPD7BNFo0OsfM4), [recording](https://youtu.be/WsspMkXG6Ys), [seminar](./week08/visualize.ipynb), **[HW](./week08/README.md)** |
-| 10 | 12.11 | Audio-Conditioned LLMs | [slides](https://docs.google.com/presentation/d/1kTkS9tHV6RUWlqP7LMmfRVZfn0-cfGcF-yy5iG0eJnw/), [recording](https://www.youtube.com/watch?v=VNg9bmF9bK0&t=11s), [seminar](./week10/audiollm-seminar.ipynb), **[HW](./week10/audiollm-hw.ipynb)** |
+В этой домашней работе предлагается ознакомиться с тем, как работает инференс языковой модели с обученным аудио выходом. В примере используется модель Mini-Omni, для большего понимания принципа работы модели вы можете изучить оригинальную статью: [arxiv](https://arxiv.org/abs/2408.16725). Так же можете обратиться к оригинальному коду: [github](https://github.com/gpt-omni/mini-omni). 
 
+В ноутбуке [tts-hw.ipynb](tts-hw.ipynb) требуется реализовать несколько полезных фичей для поддержки батчевого инференса и использования conversational модели в режиме TTS (с форсированием текстового выхода).
 
-## Previous versions
-* [2024](https://github.com/georgygospodinov/speech_course/tree/2024)
-* [2023](https://github.com/georgygospodinov/speech_course/tree/2023)
+Задание:
+1. **2 балла**: Реализовать kv-кеширование. Возможно, вы захотите заранее предусмотреть, чтобы ваша реализация работала и для пункта 2.
+2. **4 балла**: Реализовать батчевый инференс. Продумайте, как лучше добавлять паддинги при составлении входного батча.
+3. **4 балла**: Реализовать инференс с форсированием текстового выхода, чтобы можно было использовать модель как модель TTS. Вы можете добавить свои примеры текстов для озвучки. Такой режим так же должен работать в батчевом инференсе, продумайте, как правильно дополнить создание батча в этом случае. 
+
+Это задание вы можете выполнять где вам удобно - локально, с использованием google-colab (для этого в ноутбуке можно склонировать этот репозиторий и добавить в `sys.path` пути до используемых модулей) или kaggle-notebooks.
